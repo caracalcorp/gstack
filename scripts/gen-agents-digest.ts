@@ -40,7 +40,7 @@ export function generateAgentsDigest(opts?: { root?: string }): { content: strin
 
   const content = `# gstack digest v${version} — regenerate/re-copy after upgrading gstack
 
-Behavioral rules from gstack (https://github.com/garrytan/gstack), compressed
+Behavioral rules from gstack (https://github.com/caracalcorp/gstack), compressed
 for agent hosts without a full skill install. The full skills add workflows,
 reviews, and evals on top of these rules.
 
@@ -70,7 +70,7 @@ corporate tone, no AI vocabulary.
 
 ## Full gstack
 
-Clone https://github.com/garrytan/gstack and run \`./setup\` for the full
+Clone https://github.com/caracalcorp/gstack and run \`./setup\` for the full
 skill suite (reviews, ship, QA, evals). This digest is generated — edit
 scripts/gen-agents-digest.ts, not this file.
 `;

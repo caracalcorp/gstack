@@ -50,8 +50,13 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$GSTACK_DIR/VERSION"
-REMOTE_URL="${GSTACK_REMOTE_URL:-https://raw.githubusercontent.com/garrytan/gstack/main/VERSION}"
-REMOTE_REPO="${GSTACK_REMOTE_REPO:-https://github.com/garrytan/gstack.git}"
+# FORK PATCH (caracalcorp): upstream hardcodes its own org in three places.
+# One constant, three uses -- deriving beats a third literal, and a partial
+# revert of one-of-three is the silent failure bin/gstack-fork-verify exists
+# for. Overridable so tests and mirrors keep working.
+GSTACK_FORK_ORG="${GSTACK_FORK_ORG:-caracalcorp}"
+REMOTE_URL="${GSTACK_REMOTE_URL:-https://raw.githubusercontent.com/${GSTACK_FORK_ORG}/gstack/main/VERSION}"
+REMOTE_REPO="${GSTACK_REMOTE_REPO:-https://github.com/${GSTACK_FORK_ORG}/gstack.git}"
 
 # ─── Force flag (busts cache + snooze for standalone /gstack-upgrade) ──
 if [ "${1:-}" = "--force" ]; then
@@ -237,7 +242,7 @@ if [ -z "${GSTACK_REMOTE_URL:-}" ]; then
       git ls-remote "$1" refs/heads/main 2>/dev/null' _ "$REMOTE_REPO" || true)"
   _REMOTE_SHA="$(echo "$_LSR_LINE" | awk '{print $1}')"
   if echo "$_REMOTE_SHA" | grep -qE '^[0-9a-f]{40}$'; then
-    _SHA_URL="https://raw.githubusercontent.com/garrytan/gstack/${_REMOTE_SHA}/VERSION"
+    _SHA_URL="https://raw.githubusercontent.com/${GSTACK_FORK_ORG}/gstack/${_REMOTE_SHA}/VERSION"
     REMOTE="$(_receipted_version_fetch "$_SHA_URL")"
   fi
 fi

@@ -110,8 +110,16 @@ jobs:
           DOCKER_HOST: unix:///var/run/docker.sock
 
   free-suite:
-    runs-on: ubicloud-standard-8
-    timeout-minutes: 20
+    # FORK PATCH (caracalcorp): upstream runs this on a third-party provider.
+    # On our fork that label matches no runner, so the job QUEUES until timeout
+    # rather than failing -- which reads as "CI is slow", not "CI is absent".
+    # ubuntu-24.04 matches the runner every other job in this file already uses.
+    # timeout raised 20 -> 40: shard count is os.cpus()-RESERVED, so a smaller
+    # runner gets fewer shards and a longer wall. 40 is a ceiling to MEASURE
+    # against on the first run, not a tuned value -- lower it once we have a
+    # real wall time, and reach for GSTACK_FREE_JOBS before raising it further.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

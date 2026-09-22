@@ -28,7 +28,10 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubicloud-standard-8
+    # FORK PATCH (caracalcorp): see free-tests.yml -- a ubicloud label queues
+    # forever on this fork instead of failing. Secret scan + bun audit +
+    # ShellCheck are light; 10 minutes stands.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       # Shallow checkout: fetch-depth:0 cost 74s of a 92s job for checks that
