@@ -50,18 +50,21 @@ fail a job, it **queues** it — which reads as slow CI, not absent CI.
 **Zero test changes** in the pointer set above. That is deliberate and worth
 preserving — it is the cleanest possible patch set to carry through a merge.
 
-### Race fixes (not pointers)
+### Upstream defect fixes (not pointers)
 
-A second, separate category, added 2026-09-23. Both are upstream defects that
-made `gstack-sync` step 4 fail intermittently under the 6-shard load, and a
-flaky test cannot go in `known-failing-tests.txt`: the gate compares exactly, so
-it would fail as NOW PASSING on every clean run. **Drop each row the moment
-upstream fixes the same race** — resolve the conflict in upstream's favour.
+A second, separate category, added 2026-09-23: upstream defects that failed
+`gstack-sync` step 4 and could not honestly go in `known-failing-tests.txt`.
+The first two are races, and a flaky entry fails the exact comparison as NOW
+PASSING on every clean run. The third is deterministic, but the gate matches by
+test name, so baselining it would have excused every other assertion in the
+same test. **Drop each row the moment upstream fixes the same defect** --
+resolve the conflict in upstream's favour.
 
 | File | What changed | Why |
 |---|---|---|
 | `bin/gstack-codex-probe` | bash-native watchdog in `_gstack_codex_timeout_wrapper` | After its kill, the watchdog subshell still had to exit; `kill -0` read that window as "finished early" and returned 143 instead of 124. Measured 16/40 wrong with 40 concurrent runs. Now the watchdog ignores TERM once it fires and the wrapper reads its exit status. 160/160 correct idle and loaded. Affects real hosts without `timeout(1)` (stock macOS), not only the test. |
 | `test/office-hours-attempt.test.ts` | `exitsSoon()` polls up to 1s where two tests sampled `ps` once | The runner returns right after *sending* the group SIGKILL; the target stays visible 9-51ms under load. 6/48 failed loaded, 0/72 after. Still red on a real leak (verified with `setsid` escaping the group). The one test change this fork carries. |
+| `hosts/claude/hooks/memorable-user-prompt-hook.ts` | `resolveVendor`: both `Bun.which` calls pass `{ PATH: env.PATH }` | Not a race: the function took an env map but searched the process's PATH, so its test's `PATH: '/nonexistent'` case found any real `memorable` install. Fixed rather than baselined because the gate matches by test name: baselining it would have masked the 7 other assertions in that test (override precedence, no fall-through), which decide which binary receives the prompt. No current caller changes: the only one passes `process.env`, and an unset `env.PATH` falls back to the process's. Reverting line 300 alone turns the test red again. |
 
 ---
 

@@ -283,6 +283,8 @@ function isDirectory(p: string): boolean {
  * GSTACK_MEMORABLE_BIN -> MEMORABLE_BIN -> ~/.memorable/bin/memorable -> PATH.
  * An explicit override that does not resolve is an error (null), never a
  * fall-through to something else (lib/claude-bin.ts contract).
+ * PATH lookups use env.PATH, not the process's: a caller passing a scrubbed
+ * env must get the binary that env resolves to (unset falls back to process).
  */
 export function resolveVendor(env: Record<string, string | undefined>, homeDir: string): string | null {
   // Empty means unset, exactly as bash's ${GSTACK_MEMORABLE_BIN:-${MEMORABLE_BIN:-}} reads it
@@ -290,12 +292,12 @@ export function resolveVendor(env: Record<string, string | undefined>, homeDir: 
   const override = (env.GSTACK_MEMORABLE_BIN ?? '').trim() || (env.MEMORABLE_BIN ?? '').trim();
   if (override) {
     const o = stripQuotes(override);
-    const resolved = path.isAbsolute(o) ? o : (Bun.which(o) ?? null);
+    const resolved = path.isAbsolute(o) ? o : (Bun.which(o, { PATH: env.PATH }) ?? null);
     return resolved && executable(resolved) ? resolved : null;
   }
   const pinned = path.join(homeDir, '.memorable', 'bin', 'memorable');
   if (executable(pinned)) return pinned;
-  const onPath = Bun.which('memorable');
+  const onPath = Bun.which('memorable', { PATH: env.PATH });
   return onPath && executable(onPath) ? onPath : null;
 }
 
