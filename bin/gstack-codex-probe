@@ -195,18 +195,21 @@ _gstack_codex_timeout_wrapper() {
     # capture on the orphaned sleep.
     "$@" &
     local _cmd_pid=$!
-    ( sleep "$_duration" && kill -TERM "$_cmd_pid" 2>/dev/null ) >/dev/null 2>&1 &
+    # Once the watchdog commits to firing it ignores TERM, so retiring it
+    # below cannot race its own kill.
+    ( sleep "$_duration" && { trap '' TERM; kill -TERM "$_cmd_pid" 2>/dev/null; } ) >/dev/null 2>&1 &
     local _watch_pid=$!
     local _rc
     wait "$_cmd_pid"
     _rc=$?
-    if kill -0 "$_watch_pid" 2>/dev/null; then
-      # Command finished before the deadline. Retiring the watchdog subshell
-      # also defuses its pending kill (the `&& kill` lives in the subshell);
-      # its detached sleep expires harmlessly.
-      kill "$_watch_pid" 2>/dev/null
-      wait "$_watch_pid" 2>/dev/null
-    elif [ "$_rc" -ge 128 ]; then
+    # Ask the watchdog how it ended, not whether it is alive. After its kill
+    # it still has to exit, and a `kill -0` probe read that window as
+    # "finished early" and leaked 143 instead of 124 under load. Exit 0 means
+    # sleep && kill both ran: it fired. If the command finished first, the
+    # TERM retires the watchdog and defuses its pending kill (the `&& kill`
+    # lives in the subshell); its detached sleep expires harmlessly.
+    kill "$_watch_pid" 2>/dev/null
+    if wait "$_watch_pid" 2>/dev/null && [ "$_rc" -ge 128 ]; then
       _rc=124  # killed by the watchdog: report timeout(1)'s code
     fi
     return "$_rc"

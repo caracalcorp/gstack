@@ -47,8 +47,21 @@ fail a job, it **queues** it — which reads as slow CI, not absent CI.
 | `.github/workflows/free-tests.yml` | `free-suite` runner → `ubuntu-24.04` | Upstream runs it on `ubicloud-standard-8`, a third-party provider. On this fork that label matches no runner, so the job queues until timeout instead of failing. `ubuntu-24.04` is what every other job in the file already uses. |
 | `.github/workflows/quality-gate.yml` | runner → `ubuntu-24.04` | Same. |
 
-**Zero test changes.** That is deliberate and worth preserving — it is the
-cleanest possible patch set to carry through a merge.
+**Zero test changes** in the pointer set above. That is deliberate and worth
+preserving — it is the cleanest possible patch set to carry through a merge.
+
+### Race fixes (not pointers)
+
+A second, separate category, added 2026-09-23. Both are upstream defects that
+made `gstack-sync` step 4 fail intermittently under the 6-shard load, and a
+flaky test cannot go in `known-failing-tests.txt`: the gate compares exactly, so
+it would fail as NOW PASSING on every clean run. **Drop each row the moment
+upstream fixes the same race** — resolve the conflict in upstream's favour.
+
+| File | What changed | Why |
+|---|---|---|
+| `bin/gstack-codex-probe` | bash-native watchdog in `_gstack_codex_timeout_wrapper` | After its kill, the watchdog subshell still had to exit; `kill -0` read that window as "finished early" and returned 143 instead of 124. Measured 16/40 wrong with 40 concurrent runs. Now the watchdog ignores TERM once it fires and the wrapper reads its exit status. 160/160 correct idle and loaded. Affects real hosts without `timeout(1)` (stock macOS), not only the test. |
+| `test/office-hours-attempt.test.ts` | `exitsSoon()` polls up to 1s where two tests sampled `ps` once | The runner returns right after *sending* the group SIGKILL; the target stays visible 9-51ms under load. 6/48 failed loaded, 0/72 after. Still red on a real leak (verified with `setsid` escaping the group). The one test change this fork carries. |
 
 ---
 

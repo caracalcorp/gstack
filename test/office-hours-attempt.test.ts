@@ -246,6 +246,19 @@ function running(pid: number): boolean {
   return state.length > 0 && !state.startsWith('Z');
 }
 
+// The runner returns as soon as it has SENT the group SIGKILL; delivery is
+// asynchronous, and on a loaded box the target stays visible for tens of ms
+// (measured 9-51ms). Poll for death instead of sampling once; a real leak
+// still fails, just a second later.
+function exitsSoon(pid: number, withinMs = 1_000): boolean {
+  const deadline = Date.now() + withinMs;
+  while (running(pid)) {
+    if (Date.now() >= deadline) return false;
+    Bun.sleepSync(10);
+  }
+  return true;
+}
+
 const successLine = JSON.stringify({ type: 'result', subtype: 'success', result: 'captured output', num_turns: 2, total_cost_usd: 0.12 });
 
 describe('Office Hours real session runner with fake processes', () => {
@@ -293,7 +306,7 @@ describe('Office Hours real session runner with fake processes', () => {
         expect(captured.costEstimate.estimatedCost).toBe(0.12);
         expect(captured.duration).toBeLessThan(5_000);
         for (const file of ['parent.pid', 'child.pid']) {
-          expect(running(Number(fs.readFileSync(path.join(dir, file), 'utf8')))).toBe(false);
+          expect(exitsSoon(Number(fs.readFileSync(path.join(dir, file), 'utf8')))).toBe(true);
         }
       } finally { clearTimeout(timer); }
     });
@@ -309,7 +322,7 @@ describe('Office Hours real session runner with fake processes', () => {
         expect(captured.output).toBe('captured output');
         const diagnostic = JSON.parse(fs.readFileSync(path.join(dir, '.gstack/test-transcripts/drain-failure.json'), 'utf8'));
         expect(diagnostic.stderr).toContain('fixture auth failure');
-        expect(running(Number(fs.readFileSync(path.join(dir, 'child.pid'), 'utf8')))).toBe(false);
+        expect(exitsSoon(Number(fs.readFileSync(path.join(dir, 'child.pid'), 'utf8')))).toBe(true);
       });
     }, 10_000);
   }
