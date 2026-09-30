@@ -1,3 +1,14 @@
+> [!IMPORTANT]
+> **This fork is archived and no longer updated.** Caracal's gstack fork moved to
+> the private repository `caracalcorp/gstack-private` on 2026-09-30. To re-point an
+> existing checkout (access required):
+>
+> ```sh
+> git -C ~/.claude/skills/gstack remote set-url origin git@github.com:caracalcorp/gstack-private.git
+> ```
+>
+> Upstream gstack lives at [garrytan/gstack](https://github.com/garrytan/gstack).
+
 # gstack
 
 > "I don't think I've typed like a line of code probably since December, basically, which is an extremely large change." — [Andrej Karpathy](https://fortune.com/2026/03/21/andrej-karpathy-openai-cofounder-ai-agents-coding-state-of-psychosis-openclaw/), No Priors podcast, March 2026
